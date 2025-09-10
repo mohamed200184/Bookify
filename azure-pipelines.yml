@@ -1,0 +1,35 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: GitHubSync
+
+steps:
+- checkout: self
+  persistCredentials: true
+
+- script: |
+    git config --global user.name "Azure DevOps Bot"
+    git config --global user.email "azure-bot@example.com"
+
+    # 👇👇👇 الحل النهائي: ننشئ فرع جديد منعزل (orphan) بدون أي تاريخ قديم
+    git checkout --orphan temp-branch
+    git add -A
+    git commit -m "Initial clean commit for GitHub sync"
+    git branch -D master 2>/dev/null || echo "Master branch not exists, skipping delete."
+    git branch -m master
+
+    # إعداد remote لـ GitHub
+    git remote add github https://$(GITHUB_TOKEN)@github.com/mohamed200184/Bookify.git 2>/dev/null || git remote set-url github https://$(GITHUB_TOKEN)@github.com/mohamed200184/Bookify.git
+
+    # طباعة الكوميت الجديد للتأكد
+    echo "Current commit: $(git rev-parse HEAD)"
+
+    # الدفع القسري — لأننا نبدأ من الصفر
+    git push github master --force
+  displayName: '🔄 Push to GitHub'
